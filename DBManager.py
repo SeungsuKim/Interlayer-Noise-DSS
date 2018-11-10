@@ -21,7 +21,7 @@ class DBManager:
 
     def fetchTable(self, tablename):
         qurey = "SELECT * FROM " + tablename
-        return pd.read_sql(qurey, self.conn, index_col="tEngName")
+        return pd.read_sql(qurey, self.conn, index_col=["tEngName", "tKorName"])
 
 
 if __name__ == "__main__":

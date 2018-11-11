@@ -40,7 +40,6 @@ class Interface(QMainWindow):
         slider.sliderMoved.connect(lambda text=str(slider.value()): self.initLabel(label, text))
 
 
-
 if __name__ == "__main__":
     data = DBManager()
     model = ModelManager(data)

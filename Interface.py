@@ -16,9 +16,29 @@ class Interface(QMainWindow):
         self.ui.setupUi(self)
 
         self.initComboBox(self.ui.comboBoxFirstCriterion)
+        self.initSlider(self.ui.sliderMinimumFirstCriterion, self.ui.comboBoxFirstCriterion, self.ui.labelMinimumValueFirstCriterion)
+        self.initSlider(self.ui.sliderMaximumFirstCriterion, self.ui.comboBoxFirstCriterion, self.ui.labelMaximumValueFirstCriterion)
+        self.connectComboBoxSliderAndLabel(self.ui.comboBoxFirstCriterion, self.ui.sliderMinimumFirstCriterion, self.ui.labelMinimumValueFirstCriterion)
+        self.connectComboBoxSliderAndLabel(self.ui.comboBoxFirstCriterion, self.ui.sliderMaximumFirstCriterion, self.ui.labelMaximumValueFirstCriterion)
 
     def initComboBox(self, comboBox):
         comboBox.addItems(self.modelManager.getCriterions())
+
+    def initSlider(self, slider, comboBox, label):
+        minimum, maximum = self.modelManager.getRangeOfCriterion(comboBox.currentText())
+        slider.setMinimum(minimum)
+        slider.setMaximum(maximum)
+        slider.setSingleStep(1)
+        slider.setValue((minimum+maximum)//2)
+        self.initLabel(label, slider.value())
+
+    def initLabel(self, label, text):
+        label.setText(str(text))
+
+    def connectComboBoxSliderAndLabel(self, comboBox, slider, label):
+        comboBox.currentIndexChanged.connect(lambda: self.initSlider(slider, comboBox, label))
+        slider.sliderMoved.connect(lambda text=str(slider.value()): self.initLabel(label, text))
+
 
 
 if __name__ == "__main__":

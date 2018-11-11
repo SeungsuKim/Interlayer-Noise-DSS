@@ -27,3 +27,8 @@ class ModelManager(QtCore.QAbstractTableModel):
 
     def getCriterions(self):
         return list(self._data.fetchTable("techs").columns.values[3:])
+
+    def getRangeOfCriterion(self, criterion):
+        minimum = self._data.fetchTable("techs")[criterion].min()
+        maximum = self._data.fetchTable("techs")[criterion].max()
+        return minimum, maximum

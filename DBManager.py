@@ -1,82 +1,33 @@
-import csv
+import pandas as pd
 import sqlite3
 
-typeDict = {"t": "text", "n": "real"}
-
-
 class DBManager:
-    def __init__(self):
-        # Connect with SQLite DB
-        self.conn = sqlite3.connect("tech.db")
 
-        # Create a cursor from the connection
+    def __init__(self):
+        self.conn = sqlite3.connect("tech.db")
         self.cur = self.conn.cursor()
 
-        self.datatypes = []
-
-    # filename, tablename
-    def createTable(self, filename, tablename):
-        try:
-            with open(filename, encoding='utf-8-sig') as fin:
-                rows = csv.DictReader(fin)
-                cols = []
-                for fieldname in rows.fieldnames:
-                    try:
-                        datatype = typeDict[fieldname[0]]
-                        cols.append("%s %s" % (fieldname[1:], datatype))
-                        self.datatypes.append(datatype)
-                    except:
-                        print("Can't find a type indicated by " + fieldname[0])
-                        return -1
-
-                sqlCreateTable = "CREATE TABLE %s (%s)" % (tablename, ",".join(cols))
-                self.cur.execute(sqlCreateTable)
-        except FileNotFoundError:
-            print('No source .csv file exists at current directory.')
+        self.updateTable("tech.csv", "techs")
 
     def updateTable(self, filename, tablename):
+        self.deleteTable(tablename)
+
+        df = pd.read_csv(filename)
+        df.to_sql(tablename, self.conn)
+
+    def deleteTable(self, tablename):
         try:
-            with open(filename, encoding='utf-8-sig') as fin:
-                rows = csv.reader(fin)
-                techs = []
-                rowIndex = 0
-                for row in rows:
-                    if rowIndex != 0:
-                        tech = []
-                        for j in range(len(row)):
-                            if self.datatypes[j] == 'text':
-                                tech.append(row[j])
-                            elif self.datatypes[j] == 'real':
-                                tech.append(float(row[j]))
-                            else:
-                                print("Data type error")
-                                return
-                        techs.append(tech)
-                    rowIndex += 1
+            self.cur.execute("DROP TABLE " + tablename)
+        except sqlite3.OperationalError:
+            print("The table must be created before deleted.")
 
-                sqlUpdateTable = "INSERT INTO %s VALUES (%s)" % (tablename, ','.join('?' * len(techs[0])))
-                self.cur.executemany(sqlUpdateTable, techs)
-        except FileNotFoundError:
-            print('No source .csv file exists at current directory.')
-
-    def deleteTable(self):
-        try:
-            self.cur.execute("DROP TABLE TECHS")
-        except:
-            print("createTable() must be executed before calling deleteTable()")
-
-    def escapingGenerator(self, f):
-        for line in f:
-            yield line.encode("ascii", "xmlcharrefreplace").decode("ascii")
-
-    def fetchAllTechs(self):
-        self.cur.execute("SELECT * FROM TECHS")
-        return self.cur.fetchall()
+    def fetchTable(self, tablename):
+        qurey = "SELECT * FROM " + tablename
+        return pd.read_sql(qurey, self.conn)
 
 
 if __name__ == "__main__":
     m = DBManager()
-    m.deleteTable()
-    m.createTable('tech2.csv')
-    m.updateTable('tech2.csv')
-    print(m.fetchAllTechs())
+    m.updateTable("tech.csv", "techs")
+    df = m.fetchTable("techs")
+    print(df['n보편성'])

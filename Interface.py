@@ -1,42 +1,31 @@
 import sys
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QAction, QTableView, QVBoxLayout
-from PyQt5.QtGui import QIcon
+from InterfaceUI import *
 from DBManager import DBManager
 from ModelManager import ModelManager
+from PyQt5.QtWidgets import QApplication, QMainWindow
 
 
-class Interface(QWidget):
+class Interface(QMainWindow):
 
-    def __init__(self, title, model):
-        super().__init__()
+    def __init__(self, model, parent=None):
+        super(Interface, self).__init__(parent)
 
-        self.title = title
-        self.model = model
-        self.geometry = (10, 10, 640, 480)
-        self.initUI()
+        self.modelManager = model
 
-    def initUI(self):
-        self.setWindowTitle(self.title)
-        self.setGeometry(*self.geometry)
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
 
-        self.createTable()
+        self.initComboBox(self.ui.comboBoxFirstCriterion)
 
-        self.layout = QVBoxLayout()
-        self.layout.addWidget(self.tableView)
-        self.setLayout(self.layout)
-
-        self.show()
-
-    def createTable(self):
-        self.tableView = QTableView()
-        self.tableView.setModel(self.model)
-        self.tableView.move(0, 0)
+    def initComboBox(self, comboBox):
+        comboBox.addItems(self.modelManager.getCriterions())
 
 
 if __name__ == "__main__":
-    dbm = DBManager()
-    mm = ModelManager(dbm.fetchTable("techs"))
+    data = DBManager()
+    model = ModelManager(data)
 
     app = QApplication(sys.argv)
-    ex = Interface("Sample Window", mm)
+    interface = Interface(model)
+    interface.show()
     sys.exit(app.exec_())

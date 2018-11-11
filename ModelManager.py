@@ -19,7 +19,11 @@ class ModelManager(QtCore.QAbstractTableModel):
                 return QtCore.QVariant(str(self._data.iloc[index.row(), index.column()]))
         return None
 
-    def headerData(self, col, orientation, role=QtCore.Qt.DisplayRole):
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-            return self._data.columns[col]
+    def headerData(self, p_int, orientation, role=QtCore.Qt.DisplayRole):
+        if role == QtCore.Qt.DisplayRole:
+            if orientation == QtCore.Qt.Horizontal:
+                return self._data.columns[p_int]
         return None
+
+    def getCriterions(self):
+        return list(self._data.fetchTable("techs").columns.values[3:])

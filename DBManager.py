@@ -7,6 +7,8 @@ class DBManager:
         self.conn = sqlite3.connect("tech.db")
         self.cur = self.conn.cursor()
 
+        self.updateTable("tech.csv", "techs")
+
     def updateTable(self, filename, tablename):
         self.deleteTable(tablename)
 
@@ -21,7 +23,7 @@ class DBManager:
 
     def fetchTable(self, tablename):
         qurey = "SELECT * FROM " + tablename
-        return pd.read_sql(qurey, self.conn, index_col=["tEngName", "tKorName"])
+        return pd.read_sql(qurey, self.conn)
 
 
 if __name__ == "__main__":

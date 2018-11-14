@@ -1,12 +1,22 @@
+import copy
 from PyQt5 import QtCore, QtGui
 
 
 class Criterion():
 
-    def __init__(self, criterion, range, order):
+    def __init__(self, criterion, range, idealValue, order, weight):
         self.criterion = criterion
         self.range = range
+        self.idealValue = idealValue
         self.order = order
+        self.weight = weight
+
+    def __init__(self):
+        self.criterion = ""
+        self.range = (0, 0)
+        self.idealValue = 0
+        self.order = None
+        self.weight = 1
 
 
 class ModelManager(QtCore.QAbstractTableModel):
@@ -46,7 +56,27 @@ class ModelManager(QtCore.QAbstractTableModel):
         maximum = self._data[criterion].max()
         return minimum, maximum
 
-    def locData(self, cri):
-        self._data = self._data.loc[self._data[cri.criterion] >= cri.range[0]]
-        self._data = self._data.loc[self._data[cri.criterion] <= cri.range[1]]
-        self._data = self._data.sort_values(by=[cri.criterion], ascending=cri.order)
+    def locData(self, criterions):
+        for cri in criterions:
+            self._data = self._data.loc[self._data[cri.criterion] >= cri.range[0]]
+            self._data = self._data.loc[self._data[cri.criterion] <= cri.range[1]]
+
+    def sortData(self, criterions):
+        for cri in criterions:
+            self._data = self._data.sort_values(by=[cri.criterion], ascending=cri.order)
+
+    def sortNormalizedData(self, criterions):
+        self._data_normalized = copy.deepcopy(self._data)
+        idealValues = list()
+        cris = ['index']
+        for cri in criterions:
+            idealValues.append(((cri.idealValue-self._data_normalized[cri.criterion].min())/(self._data_normalized[cri.criterion].max()-self._data_normalized[cri.criterion].min()))/cri.weight)
+            self._data_normalized[cri.criterion] = ((self._data_normalized[cri.criterion]-self._data_normalized[cri.criterion].min())/(self._data_normalized[cri.criterion].max()-self._data_normalized[cri.criterion].min()))
+            cris.append(cri.criterion)
+        self._data_normalized = self._data_normalized[cris]
+        distances = [0]*self._data_normalized.shape[0]
+        for i, row in self._data_normalized.iterrows():
+            for j, vec in enumerate(row[1:]):
+                distances[i] += (idealValues[j]-vec)**2
+        sorted_index = sorted(range(len(distances)), key=lambda k: distances[k])
+        self._data = self._data.loc[sorted_index]

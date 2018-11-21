@@ -3,6 +3,7 @@ from InterfaceUI import *
 from DBManager import DBManager
 from ModelManager import ModelManager, Criterion
 from PyQt5.QtWidgets import QApplication, QErrorMessage, QMainWindow
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
 
 class Interface(QMainWindow):
@@ -16,6 +17,7 @@ class Interface(QMainWindow):
         self.ui.setupUi(self)
 
         self.numCriterion = 2
+        self.sourceList = self.ui.listViewSource
         self.comboBoxs = [self.ui.comboBoxFirstCriterion, self.ui.comboBoxSecondCriterion]
         self.sliders = [[self.ui.sliderMinimumFirstCriterion, self.ui.sliderMaximumFirstCriterion],
                         [self.ui.sliderMinimumSecondCriterion, self.ui.sliderMaximumSecondCriterion]]
@@ -27,6 +29,7 @@ class Interface(QMainWindow):
                              [self.ui.radioButtonSecondCriterionAscendingOrder, self.ui.radioButtonSecondCriterionDescendingOrder]]
         self.radioButtonsDisabled = [False, False]
 
+        self.initSourceList(self.sourceList)
         for i in range(self.numCriterion):
             self.initComboBox(self.comboBoxs[i])
             for j in range(2):
@@ -39,7 +42,8 @@ class Interface(QMainWindow):
                 self.connectComboBoxSliderAndLabel(self.comboBoxs[i], self.sliders[i][j], self.labelsValue[i][j])
         self.ui.lineFirstCriterionIdealValue.textChanged.connect(lambda: self.changeStateRadioButton(self.radioButtons[0], 0))
         self.ui.lineSecondCriterionIdealValue.textChanged.connect(lambda: self.changeStateRadioButton(self.radioButtons[1], 1))
-        self.ui.pushButtonDone.clicked.connect(self.calculateResult)
+        self.ui.pushButtonCriterionDone.clicked.connect(self.calculateResult)
+        self.ui.pushButtonSourceDone.clicked.connect(self.analyzeSource)
 
         self.radioButtonDisabled = False
 
@@ -61,6 +65,14 @@ class Interface(QMainWindow):
     def initSpinBox(self, spinBox):
         spinBox.setMinimum(1)
         spinBox.setMaximum(10)
+
+    def initSourceList(self, sourceList):
+        model = QStandardItemModel()
+        for source in self.modelManager.getSources():
+            item = QStandardItem(source)
+            item.setCheckable(True)
+            model.appendRow(item)
+        sourceList.setModel(model)
 
     def changeStateRadioButton(self, radioButtons, i):
         if self.lineEdits[i].text() != "":
@@ -119,6 +131,12 @@ class Interface(QMainWindow):
             self.modelManager.sortData(criterions)
         else:
             self.modelManager.sortNormalizedData(criterions)
+
+    def analyzeSource(self):
+        for i in range(self.sourceList.rowCount()):
+            item = self.sourceList.item(i)
+            if item.checkState() == QtCore.Qt.Checked():
+                print(item.accessibleText())
 
     def connectComboBoxSliderAndLabel(self, comboBox, slider, label):
         comboBox.currentIndexChanged.connect(lambda: self.initSlider(slider, comboBox, label))

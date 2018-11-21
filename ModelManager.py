@@ -25,7 +25,8 @@ class ModelManager(QtCore.QAbstractTableModel):
         QtCore.QAbstractTableModel.__init__(self, parent)
         self._tableName = tableName
         self._dataManager = data
-        self._data = self._dataManager.fetchTable(tableName)
+        self._data = self._dataManager.fetchTable(self._tableName)
+        self._dataSource = self._dataManager.fetchTable("sources")
 
     def loadData(self):
         self._data = self._dataManager.fetchTable(self._tableName)
@@ -47,6 +48,9 @@ class ModelManager(QtCore.QAbstractTableModel):
             if orientation == QtCore.Qt.Horizontal:
                 return self._data.columns[p_int]
         return None
+
+    def getSources(self):
+        return list(self._dataSource["소음원"])
 
     def getCriterions(self):
         return list(self._data.columns.values[3:])
@@ -80,3 +84,23 @@ class ModelManager(QtCore.QAbstractTableModel):
                 distances[i] += (idealValues[j]-vec)**2
         sorted_index = sorted(range(len(distances)), key=lambda k: distances[k])
         self._data = self._data.loc[sorted_index]
+
+
+class SourceModelManager(QtCore.QAbstractListModel):
+
+    def __init__(self, data, tableName, parent=None, *args):
+        super(SourceModelManager, self).__init__(parent, *args)
+
+        self._tableName = tableName
+        self._dataManager = data
+        self._data = self._dataManager.fetchTable(self._tableName)
+
+    def loadData(self):
+        self._data = self._dataManager.fetchTable(self._tableName)
+
+    def data(self, index, role):
+        if index.isValid():
+            if role == QtCore.Qt.DisplayRole:
+                return QtCore.QVariant(str(self._data.iloc[1, index.column()]))
+        return None
+

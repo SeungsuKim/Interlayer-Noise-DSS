@@ -8,6 +8,7 @@ class DBManager:
         self.cur = self.conn.cursor()
 
         self.updateTable("tech.csv", "techs")
+        self.updateTable("source.csv", "sources")
 
     def updateTable(self, filename, tablename):
         self.deleteTable(tablename)
@@ -28,6 +29,5 @@ class DBManager:
 
 if __name__ == "__main__":
     m = DBManager()
-    m.updateTable("tech.csv", "techs")
-    df = m.fetchTable("techs")
-    print(df['n보편성'])
+    df = m.fetchTable("sources")
+    print(df["소음원"])

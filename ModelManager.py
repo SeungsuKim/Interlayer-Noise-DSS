@@ -27,6 +27,7 @@ class ModelManager(QtCore.QAbstractTableModel):
         self._dataManager = data
         self._data = self._dataManager.fetchTable(self._tableName)
         self._dataSource = self._dataManager.fetchTable("sources")
+        self._numTech = len(self._data)
 
     def loadData(self):
         self._data = self._dataManager.fetchTable(self._tableName)
@@ -72,18 +73,27 @@ class ModelManager(QtCore.QAbstractTableModel):
     def sortNormalizedData(self, criterions):
         self._data_normalized = copy.deepcopy(self._data)
         idealValues = list()
-        cris = ['index']
+        scores = [[],[]]
+        cris = []
         for cri in criterions:
             idealValues.append(((cri.idealValue-self._data_normalized[cri.criterion].min())/(self._data_normalized[cri.criterion].max()-self._data_normalized[cri.criterion].min()))/cri.weight)
             self._data_normalized[cri.criterion] = ((self._data_normalized[cri.criterion]-self._data_normalized[cri.criterion].min())/(self._data_normalized[cri.criterion].max()-self._data_normalized[cri.criterion].min()))
             cris.append(cri.criterion)
+        distances = [0] * self._numTech
         self._data_normalized = self._data_normalized[cris]
-        distances = [0]*self._data_normalized.shape[0]
-        for i, row in self._data_normalized.iterrows():
-            for j, vec in enumerate(row[1:]):
-                distances[i] += (idealValues[j]-vec)**2
-        sorted_index = sorted(range(len(distances)), key=lambda k: distances[k])
+        for index, row in self._data_normalized.iterrows():
+            for j, vec in enumerate(row):
+                distance = (idealValues[j]-vec)**2
+                print(index, len(distances))
+                distances[index] += distance
+                scores[j].append(1/distance)
+        print(self._data_normalized)
+        print(self._data)
+        print(list(self._data['index']))
+        sorted_index = sorted(list(self._data['index']), key=lambda k: distances[k])
+        print(sorted_index)
         self._data = self._data.loc[sorted_index]
+        return scores
 
 
 class SourceModelManager(QtCore.QAbstractListModel):

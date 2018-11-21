@@ -1,4 +1,4 @@
-import sys
+import sys, copy
 from InterfaceUI import *
 from DBManager import DBManager
 from ModelManager import ModelManager, Criterion
@@ -45,8 +45,6 @@ class Interface(QMainWindow):
         self.ui.pushButtonCriterionDone.clicked.connect(self.calculateResult)
         self.ui.pushButtonSourceDone.clicked.connect(self.analyzeSource)
 
-        self.radioButtonDisabled = False
-
     def initComboBox(self, comboBox):
         comboBox.addItems(self.modelManager.getCriterions())
 
@@ -87,7 +85,9 @@ class Interface(QMainWindow):
     def calculateResult(self):
         self.modelManager.loadData()
 
-        criterions = [Criterion()] * self.numCriterion
+        criterions = []
+        for i in range(self.numCriterion):
+            criterions.append(Criterion())
 
         for i in range(self.numCriterion):
             if i != self.numCriterion-1:
@@ -127,16 +127,18 @@ class Interface(QMainWindow):
                 criterions[i].order = order
 
         self.modelManager.locData(criterions)
-        if not self.radioButtonDisabled:
+        if (not self.radioButtonsDisabled[0]) and (not self.radioButtonsDisabled[1]):
             self.modelManager.sortData(criterions)
         else:
-            self.modelManager.sortNormalizedData(criterions)
+            scores= self.modelManager.sortNormalizedData(criterions)
+            print(scores)
 
     def analyzeSource(self):
-        for i in range(self.sourceList.rowCount()):
-            item = self.sourceList.item(i)
-            if item.checkState() == QtCore.Qt.Checked():
-                print(item.accessibleText())
+        model = self.sourceList.model()
+        for i in range(model.rowCount()):
+            item = model.item(i)
+            if item.checkState() == QtCore.Qt.Checked:
+                print(item.text())
 
     def connectComboBoxSliderAndLabel(self, comboBox, slider, label):
         comboBox.currentIndexChanged.connect(lambda: self.initSlider(slider, comboBox, label))

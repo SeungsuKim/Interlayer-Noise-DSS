@@ -1,9 +1,16 @@
-import sys, copy
+import sys, random
+import numpy as np
+import matplotlib.pyplot as plt
+
+from operator import add
 from InterfaceUI import *
 from DBManager import DBManager
 from ModelManager import ModelManager, Criterion
-from PyQt5.QtWidgets import QApplication, QErrorMessage, QMainWindow
+from PyQt5.QtWidgets import QApplication, QErrorMessage, QMainWindow, QWidget, QVBoxLayout
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
+
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 
 class Interface(QMainWindow):
@@ -30,6 +37,7 @@ class Interface(QMainWindow):
         self.radioButtonsDisabled = [False, False]
 
         self.initSourceList(self.sourceList)
+        self.initPlotTab()
         for i in range(self.numCriterion):
             self.initComboBox(self.comboBoxs[i])
             for j in range(2):
@@ -44,6 +52,16 @@ class Interface(QMainWindow):
         self.ui.lineSecondCriterionIdealValue.textChanged.connect(lambda: self.changeStateRadioButton(self.radioButtons[1], 1))
         self.ui.pushButtonCriterionDone.clicked.connect(self.calculateResult)
         self.ui.pushButtonSourceDone.clicked.connect(self.analyzeSource)
+
+    def initPlotTab(self):
+        self.plotTab = QWidget()
+        self.ui.tabWidget.addTab(self.plotTab, "Plotted Result")
+        self.figure = plt.figure(figsize=(10, 5))
+        self.canvas = FigureCanvas(self.figure)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.canvas)
+        self.ui.tabWidget.widget(2).setLayout(layout)
 
     def initComboBox(self, comboBox):
         comboBox.addItems(self.modelManager.getCriterions())
@@ -126,12 +144,43 @@ class Interface(QMainWindow):
                     return
                 criterions[i].order = order
 
-        self.modelManager.locData(criterions)
+        numData = self.modelManager.locData(criterions)
+        if numData == 0:
+            self.errorDialog.showMessage("There is no technology satisfying the conditions.")
+            return
+
         if (not self.radioButtonsDisabled[0]) and (not self.radioButtonsDisabled[1]):
             self.modelManager.sortData(criterions)
         else:
-            scores= self.modelManager.sortNormalizedData(criterions)
-            print(scores)
+            scores, sorted_index = self.modelManager.sortNormalizedData(criterions)
+            totalScores = [0] * len(scores[0])
+            for i in range(len(scores)):
+                totalScores = list(map(add, totalScores, scores[i]))
+            sorted_index = sorted(range(len(totalScores)), key=lambda k: totalScores[k])
+            for i in range(len(totalScores)):
+                if totalScores[i] < 0.0001:
+                    sorted_index.remove(i)
+            sorted_index.reverse()
+
+            plt.gcf().clear()
+            ind = np.arange(len(sorted_index))
+            ax = self.figure.add_subplot(111)
+            bars = []
+            for i in range(len(scores)):
+                scores[i] = [scores[i][j] for j in sorted_index]
+                bottom = None if i==0 else scores[i-1]
+                bars.append(ax.bar(ind, scores[i], bottom=bottom))
+            plt.ylabel('Scores')
+            plt.title('Scores of each technology by selected criterions.')
+            legend = []
+            for cri in criterions:
+                legend.append(cri.criterion)
+            techNames = self.modelManager.getTechNames()
+            xticks = [techNames[i] for i in sorted_index]
+            plt.xticks(ind, xticks)
+            plt.legend(bars, legend)
+
+            self.canvas.draw()
 
     def analyzeSource(self):
         model = self.sourceList.model()

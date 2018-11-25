@@ -1,4 +1,4 @@
-import copy
+import sys, copy
 from PyQt5 import QtCore, QtGui
 
 
@@ -54,11 +54,24 @@ class ModelManager(QtCore.QAbstractTableModel):
     def getSources(self):
         return list(self._dataSource["소음원"])
 
+    def getCategory(self, source):
+        row = self._dataSource.loc[self._dataSource["소음원"] == source]
+        return str(row["분류"])
+
+    def getIntensity(self, source):
+        row = self._dataSource.loc[self._dataSource["소음원"]==source]
+        return int(row["최소 세기"]), int(row["최대 세기"])
+
     def getTechNames(self):
-        return list(self._dataOrigin['tEngName'])
+        return list(self._dataOrigin['구조명'])
+
+    def getTechByIndex(self, index):
+        return self._data.iloc[index, :]
 
     def getCriterions(self):
-        return list(self._data.columns.values[3:])
+        criterions = list(self._data.columns.values[4:])
+        criterions.remove("유효기간")
+        return criterions
 
     def getRangeOfCriterion(self, criterion):
         minimum = self._data[criterion].min()
@@ -78,6 +91,64 @@ class ModelManager(QtCore.QAbstractTableModel):
     def sortNormalizedData(self, criterions):
         self._data_normalized = copy.deepcopy(self._data)
         idealValues = list()
+        distances = list()
+        scores = list()
+        cris = list()
+        for i in range(len(criterions)):
+            distances.append([None]*self._numTech)
+            scores.append([0]*self._numTech)
+        for i, cri in enumerate(criterions):
+            minimum, maximum = cri.range
+            idealValues.append((cri.idealValue-minimum)/(maximum-minimum)/cri.weight)
+            self._data_normalized[cri.criterion] = (self._data_normalized[cri.criterion]-minimum)/(maximum-minimum)/cri.weight
+            cris.append(cri.criterion)
+        self._data_normalized = self._data_normalized[cris]
+
+        for index, row in self._data_normalized.iterrows():
+            for j, vec in enumerate(row):
+                distance = (idealValues[j]-vec)**2
+                distances[j][index] = distance
+
+        for i in range(len(distances)):
+            for j in range(len(distances[0])):
+                if not distances[i][j] == None:
+                    if distances[i][j] == 0:
+                        scores[i][j] = sys.maxsize/len(criterions)
+                    else:
+                        scores[i][j] = 1/distances[i][j]
+
+        totalScores = [0] * self._numTech
+        for j in range(len(distances[0])):
+            for i in range(len(distances)):
+                totalScores[j] += scores[i][j]
+        for i in range(len(distances)):
+            for j in range(len(distances[0])):
+                if totalScores[j] == 0:
+                    scores[i][j] = 0
+                else:
+                    scores[i][j] /= totalScores[j]
+        minScore = min(totalScores)
+        maxScore = max(totalScores)
+        totalScores = [(score-minScore)/(maxScore-minScore)*100 for score in totalScores]
+        for i in range(len(distances)):
+            for j in range(len(distances[0])):
+                scores[i][j] *= totalScores[j]
+        sorted_index = sorted(range(len(totalScores)), key=lambda k: totalScores[k])
+        for i in range(len(totalScores)):
+            if totalScores[i] < 0.0001:
+                sorted_index.remove(i)
+        sorted_index.reverse()
+        print(self._data_normalized)
+        print(scores, sorted_index)
+        self._data = self._data.reindex(sorted_index)
+        return scores, sorted_index[:10]
+
+
+
+    '''
+    def sortNormalizedData(self, criterions):
+        self._data_normalized = copy.deepcopy(self._data)
+        idealValues = list()
         scores = []
         sorted_index = []
         for i in range(len(criterions)):
@@ -85,11 +156,15 @@ class ModelManager(QtCore.QAbstractTableModel):
         cris = []
         if len(self._data) >= 2:
             for cri in criterions:
-                idealValues.append(((cri.idealValue-self._data_normalized[cri.criterion].min())/(self._data_normalized[cri.criterion].max()-self._data_normalized[cri.criterion].min()))/cri.weight)
-                self._data_normalized[cri.criterion] = ((self._data_normalized[cri.criterion]-self._data_normalized[cri.criterion].min())/(self._data_normalized[cri.criterion].max()-self._data_normalized[cri.criterion].min()))
+                miminum = self._data_normalized[cri.criterion].min()
+                maximum = self._data_normalized[cri.criterion].max()
+                if minimum == maximum:
+                    self._data_normalized[cri.criterion] = 0.5
+                else:
+                    idealValues.append(((cri.idealValue-self._data_normalized[cri.criterion].min())/(self._data_normalized[cri.criterion].max()-self._data_normalized[cri.criterion].min()))/cri.weight)
+                    self._data_normalized[cri.criterion] = ((self._data_normalized[cri.criterion]-self._data_normalized[cri.criterion].min())/(self._data_normalized[cri.criterion].max()-self._data_normalized[cri.criterion].min()))
                 cris.append(cri.criterion)
         distances = [0] * self._numTech
-        print(self._numTech)
         self._data_normalized = self._data_normalized[cris]
         for index, row in self._data_normalized.iterrows():
             for j, vec in enumerate(row):
@@ -102,3 +177,4 @@ class ModelManager(QtCore.QAbstractTableModel):
         print(sorted_index)
         print(distances)
         return scores, sorted_index
+    '''

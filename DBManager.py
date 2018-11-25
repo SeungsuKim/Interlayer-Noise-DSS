@@ -13,7 +13,7 @@ class DBManager:
     def updateTable(self, filename, tablename):
         self.deleteTable(tablename)
 
-        df = pd.read_csv(filename)
+        df = pd.read_csv(filename, encoding="utf-8")
         df.to_sql(tablename, self.conn)
 
     def deleteTable(self, tablename):
@@ -24,10 +24,13 @@ class DBManager:
 
     def fetchTable(self, tablename):
         qurey = "SELECT * FROM " + tablename
-        return pd.read_sql(qurey, self.conn)
+        df = pd.read_sql(qurey, self.conn)
+        if tablename == 'techs':
+            df["유효기간"] = pd.to_datetime(df["유효기간"])
+        return df
 
 
 if __name__ == "__main__":
     m = DBManager()
-    df = m.fetchTable("sources")
-    print(df["소음원"])
+    df = m.fetchTable("techs")
+    print(df)
